@@ -1,10 +1,10 @@
- const grid = document.getElementById("grid");
+const grid = document.getElementById("grid");
 const emptyState = document.getElementById("emptyState");
 const input = document.getElementById("searchInput");
 const toast = document.getElementById("toast");
 const sourceSelect = document.getElementById("sourceSelect");
 
-// Render songs
+// Render search results
 function render(tracks) {
   grid.innerHTML = "";
   if (!tracks.length) {
@@ -25,18 +25,20 @@ function render(tracks) {
   });
 }
 
+// Play preview
 function playSong(url) {
   const audio = new Audio(url);
   audio.play().catch(() => showToast("Preview cannot play, try another song."));
 }
 
+// Toast message
 function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
-// Search APIs
+// iTunes API
 async function searchiTunes(query) {
   const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`);
   const data = await res.json();
@@ -48,19 +50,19 @@ async function searchiTunes(query) {
   }));
 }
 
+// Deezer API (via proxy to fix CORS)
 async function searchDeezer(query) {
-  const res = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&output=jsonp&limit=12`);
-  const text = await res.text();
-
-  // Deezer returns JSONP → extract JSON
-  const json = text.replace(/^.+?\\(/, "").replace(/\\);$/, "");
-  const data = JSON.parse(json);
+  const proxy = "https://api.allorigins.win/get?url=";
+  const target = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=12`;
+  const res = await fetch(proxy + encodeURIComponent(target));
+  const wrapped = await res.json();
+  const data = JSON.parse(wrapped.contents);
 
   return data.data.map(t => ({
     title: t.title,
     artist: t.artist.name,
     cover: t.album.cover_medium,
-    url: t.preview // 30s preview mp3
+    url: t.preview // 30s mp3
   }));
 }
 
@@ -82,5 +84,5 @@ input.addEventListener("input", async () => {
   }
 });
 
-// Default state
+// Initial state
 render([]);
